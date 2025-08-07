@@ -189,12 +189,22 @@ class ButteryAnimationEngine {
     }
     
     play() {
+        // Default behavior: play all years
+        this.playSelectedYears([1, 2, 3]);
+    }
+    
+    playSelectedYears(selectedYears = [1, 2, 3]) {
         if (this.isPlaying) {
             console.log('🎭 Animation already playing');
             return;
         }
         
-        console.log('🎬 Starting BUTTERY SMOOTH animation sequence...');
+        if (selectedYears.length === 0) {
+            console.log('⚠️ No years selected for animation');
+            return;
+        }
+        
+        console.log(`🎬 Starting BUTTERY SMOOTH animation for years: ${selectedYears.join(', ')}`);
         this.isPlaying = true;
         this.setPlayButtonState(true);
         
@@ -212,10 +222,14 @@ class ButteryAnimationEngine {
             }
         });
         
-        // Animate each year with full Disney magic
-        this.animateYearButtery('year1', 0);
-        this.animateYearButtery('year2', this.animationParams.timing.staggerDelay);
-        this.animateYearButtery('year3', this.animationParams.timing.staggerDelay * 2);
+        // Animate only selected years with staggered timing
+        let staggerIndex = 0;
+        selectedYears.forEach(yearNumber => {
+            const yearKey = `year${yearNumber}`;
+            const delay = staggerIndex * this.animationParams.timing.staggerDelay;
+            this.animateYearButtery(yearKey, delay);
+            staggerIndex++;
+        });
     }
     
     animateYearButtery(year, delay) {
@@ -345,7 +359,9 @@ class ButteryAnimationEngine {
         }));
         
         // Clear cache and rebuild
-        DataUtils.clearCache();
+        if (typeof DataUtils !== 'undefined' && DataUtils.clearCache) {
+            DataUtils.clearCache();
+        }
         this.setupChart();
     }
     
