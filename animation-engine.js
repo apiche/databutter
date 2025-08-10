@@ -1,38 +1,12 @@
-// databutter - Buttery Animation Engine (Performance Optimized)
-// Reduced complexity to maintain 60fps
-
-// databutter - Full Buttery Animation Engine
-// All Disney principles with smooth drawing animations
+// databutter - Organic Flow Animation Engine
+// Living, breathing chart animations with realistic fluid physics
 
 class ButteryAnimationEngine {
     constructor(data, svgSelector, params = {}) {
-        // Default animation parameters
+        // Simplified animation parameters
         this.animationParams = {
-            timing: {
-                baseDuration: 1500,
-                staggerDelay: 300
-            },
-            squashAndStretch: {
-                enabled: true,
-                squashAmount: 0.9,
-                stretchAmount: 1.1,
-                squashDuration: 0.15
-            },
-            anticipation: {
-                enabled: true,
-                pullbackAmount: 0.95,
-                pauseDuration: 0.05
-            },
-            followThrough: {
-                enabled: true,
-                overshootAmount: 1.05,
-                settleDuration: 0.2
-            },
-            secondaryAction: {
-                enabled: true,
-                jiggleIntensity: 1,
-                maxJiggles: 3
-            }
+            animationSpeed: 1.0,
+            drawingDuration: 2.0
         };
         
         this.data = data;
@@ -45,13 +19,19 @@ class ButteryAnimationEngine {
         this.width = 1000 - this.margin.left - this.margin.right;
         this.height = 400 - this.margin.top - this.margin.bottom;
         
+        // Organic flow properties
+        this.originalPoints = [];
+        this.noiseOffset = 0;
+        this.breathingOffset = 0;
+        this.drawProgress = 0;
+        
         this.setupChart();
         
-        console.log('🎭 Buttery Animation Engine ready');
+        console.log('🌊 Organic Flow Animation Engine ready');
     }
     
     setupChart() {
-        console.log('🎭 Setting up buttery smooth chart...');
+        console.log('🌊 Setting up progressive drawing chart...');
         
         // Clear existing content
         this.svg.selectAll("*").remove();
@@ -75,99 +55,38 @@ class ButteryAnimationEngine {
         // Add axes
         this.addAxes();
         
-        // Create area generators
-        this.areaGenerators = {
-            year1: d3.area()
-                .x(d => this.xScale(d.day))
-                .y0(this.height)
-                .y1(d => this.yScale(d.year1))
-                .curve(d3.curveCardinal.tension(0.3)),
-                
-            year2: d3.area()
-                .x(d => this.xScale(d.day))
-                .y0(this.height)
-                .y1(d => this.yScale(d.year2))
-                .curve(d3.curveCardinal.tension(0.3)),
-                
-            year3: d3.area()
-                .x(d => this.xScale(d.day))
-                .y0(this.height)
-                .y1(d => this.yScale(d.year3))
-                .curve(d3.curveCardinal.tension(0.3))
-        };
+        // Create progressive area generator
+        this.areaGenerator = d3.area()
+            .x(d => this.xScale(d.day))
+            .y0(this.height)
+            .y1(d => this.yScale(d.year1))
+            .curve(d3.curveCardinal.tension(0.3));
         
-        // Create styled area paths (initially hidden)
-        this.paths = {};
+        // Store original points for morphing
+        this.storeOriginalPoints();
         
-        // Year 1 - Red
-        this.paths.year1 = this.chartGroup
+        // Create the organic area path (starts empty)
+        this.organicPath = this.chartGroup
             .append("path")
-            .datum(this.data)
-            .attr("class", "area-path year-1")
-            .attr("d", this.areaGenerators.year1)
+            .attr("class", "area-path year-1 organic-flow")
             .style("fill", "#e74c3c")
             .style("stroke", "#c0392b")
             .style("stroke-width", "2px")
-            .style("fill-opacity", 0.7)
-            .style("opacity", 0);
+            .style("fill-opacity", 0.7);
         
-        // Year 2 - Orange
-        this.paths.year2 = this.chartGroup
-            .append("path")
-            .datum(this.data)
-            .attr("class", "area-path year-2")
-            .attr("d", this.areaGenerators.year2)
-            .style("fill", "#f39c12")
-            .style("stroke", "#e67e22")
-            .style("stroke-width", "2px")
-            .style("fill-opacity", 0.7)
-            .style("opacity", 0);
+        // Initialize with empty data
+        this.currentDataSlice = [];
         
-        // Year 3 - Green
-        this.paths.year3 = this.chartGroup
-            .append("path")
-            .datum(this.data)
-            .attr("class", "area-path year-3")
-            .attr("d", this.areaGenerators.year3)
-            .style("fill", "#27ae60")
-            .style("stroke", "#229954")
-            .style("stroke-width", "2px")
-            .style("fill-opacity", 0.7)
-            .style("opacity", 0);
-        
-        // Setup drawing masks for smooth reveal animation
-        this.setupDrawingMasks();
-        
-        console.log('✨ Buttery chart ready for animation');
+        console.log('✨ Progressive drawing chart ready');
     }
     
-    setupDrawingMasks() {
-        // Create defs for masks
-        const defs = this.svg.select("defs").empty() 
-            ? this.svg.append("defs") 
-            : this.svg.select("defs");
-        
-        // Create drawing masks for each year
-        ['year1', 'year2', 'year3'].forEach(year => {
-            const maskId = `draw-mask-${year}`;
-            
-            // Remove existing
-            defs.select(`#${maskId}`).remove();
-            
-            // Create mask
-            const mask = defs.append("mask").attr("id", maskId);
-            
-            // Reveal rectangle (starts at width 0, will animate to full width)
-            mask.append("rect")
-                .attr("width", 0)
-                .attr("height", this.height + 20)
-                .attr("y", -10)
-                .attr("fill", "white")
-                .attr("class", `reveal-${year}`);
-            
-            // Apply mask to path
-            this.paths[year].attr("mask", `url(#${maskId})`);
-        });
+    storeOriginalPoints() {
+        // Store the original data points for morphing
+        this.originalPoints = this.data.map(d => ({
+            x: this.xScale(d.day),
+            y: this.yScale(d.year1),
+            originalY: this.yScale(d.year1)
+        }));
     }
     
     addAxes() {
@@ -188,23 +107,13 @@ class ButteryAnimationEngine {
             );
     }
     
-    play() {
-        // Default behavior: play all years
-        this.playSelectedYears([1, 2, 3]);
-    }
-    
-    playSelectedYears(selectedYears = [1, 2, 3]) {
+    playOrganicFlow() {
         if (this.isPlaying) {
-            console.log('🎭 Animation already playing');
+            console.log('🌊 Animation already playing');
             return;
         }
         
-        if (selectedYears.length === 0) {
-            console.log('⚠️ No years selected for animation');
-            return;
-        }
-        
-        console.log(`🎬 Starting BUTTERY SMOOTH animation for years: ${selectedYears.join(', ')}`);
+        console.log(`🌊 Starting realistic fluid momentum animation`);
         this.isPlaying = true;
         this.setPlayButtonState(true);
         
@@ -213,142 +122,275 @@ class ButteryAnimationEngine {
             this.timeline.kill();
         }
         
-        // Create buttery timeline with all Disney principles
+        // Create flow timeline
         this.timeline = gsap.timeline({
             onComplete: () => {
-                console.log('✨ BUTTERY animation complete');
+                console.log('✨ Realistic fluid animation complete');
                 this.isPlaying = false;
                 this.setPlayButtonState(false);
             }
         });
         
-        // Animate only selected years with staggered timing
-        let staggerIndex = 0;
-        selectedYears.forEach(yearNumber => {
-            const yearKey = `year${yearNumber}`;
-            const delay = staggerIndex * this.animationParams.timing.staggerDelay;
-            this.animateYearButtery(yearKey, delay);
-            staggerIndex++;
+        // Single animation style with micro-organic life + realistic jello
+        this.animateRealisticFluid();
+    }
+    
+    animateRealisticFluid() {
+        console.log('🌊 Starting progressive drawing animation...');
+        const speed = this.animationParams.animationSpeed;
+        const drawDuration = this.animationParams.drawingDuration / speed;
+        
+        // Calculate timing for each segment
+        const totalSegments = this.data.length;
+        const segmentDuration = drawDuration / totalSegments;
+        
+        console.log(`📊 Drawing ${totalSegments} segments over ${drawDuration}s (${segmentDuration}s per segment)`);
+        
+        // Store reference to this for use in callbacks
+        const self = this;
+        
+        // Progressive drawing with explicit function binding
+        for (let i = 0; i < totalSegments; i++) {
+            const segmentDelay = i * segmentDuration;
+            
+            // Use explicit function with bound context
+            this.timeline.call(function() {
+                self.addDataSegment(i);
+            }, segmentDelay);
+        }
+        
+        // Clunk after drawing completes
+        this.timeline.call(function() {
+            console.log('🍮 Drawing complete - starting clunk');
+            self.jelloSettle();
+        }, drawDuration + 0.1);
+        
+        // Micro-life after clunk
+        this.timeline.to(this.organicPath.node(), {
+            y: 1,
+            duration: 1.0 / speed,
+            ease: "sine.inOut",
+            yoyo: true,
+            repeat: 3
+        }, drawDuration + 0.3);
+        
+        // Return to accurate data
+        this.timeline.call(function() {
+            self.returnToAccurateData();
         });
     }
     
-    animateYearButtery(year, delay) {
-        const baseDuration = this.animationParams.timing.baseDuration / 1000;
-        const element = this.paths[year].node();
-        const revealElement = `.reveal-${year}`;
+    // === PROGRESSIVE SEGMENT ADDITION ===
+    addDataSegment(segmentIndex) {
+        console.log(`📈 Adding segment ${segmentIndex + 1}/${this.data.length}`);
         
-        console.log(`🧈 Animating ${year} with FULL BUTTER at ${delay}ms delay`);
+        // Add the next data point to our current slice
+        this.currentDataSlice = this.data.slice(0, segmentIndex + 1);
         
-        // === DISNEY PRINCIPLE 2: ANTICIPATION ===
-        if (this.animationParams.anticipation.enabled) {
-            this.timeline.to(element, {
-                scaleX: this.animationParams.anticipation.pullbackAmount,
-                transformOrigin: "center center",
-                duration: 0.1,
-                ease: "power2.in"
-            }, delay / 1000);
+        // Future: This is where we'll add leading edge morphing based on acceleration
+        // For now, just draw the segment normally
+        this.updateProgressivePath();
+    }
+    
+    // === UPDATE PATH WITH CURRENT DATA SLICE ===
+    updateProgressivePath() {
+        // Update the path with current data slice
+        this.organicPath
+            .datum(this.currentDataSlice)
+            .attr("d", this.areaGenerator);
+    }
+    
+    // === SINGLE MICRO-LIFE FUNCTION (simplified) ===
+    updateMicroLife() {
+        this.breathingOffset += 0.02;
+        const morphedPoints = this.originalPoints.map((point, i) => {
+            // MICRO movement: max 1 pixel - barely perceptible life
+            const microLife = Math.sin(this.breathingOffset + i * 0.3) * 1.0;
+            return {
+                ...point,
+                y: point.originalY + microLife
+            };
+        });
+        this.updatePathWithPoints(morphedPoints);
+    }
+    
+    // === INTEGRATED CLUNK: Manual sequencing to avoid callback errors ===
+    jelloSettle() {
+        console.log('🍮 Buttery integrated clunk starting...');
+        
+        // Pre-calculate momentum data once
+        const momentumData = this.originalPoints.map((point, i) => {
+            const dataHeight = this.data[i].year1;
+            return {
+                liquidMass: dataHeight / DataUtils.getMaxValue()
+            };
+        });
+        
+        // Manual sequence without problematic callbacks
+        setTimeout(() => {
+            console.log('🍮 Phase 1: Overshoot');
+            this.morphVerticalBoundary(momentumData, 'overshoot');
+        }, 0);
+        
+        setTimeout(() => {
+            console.log('🍮 Phase 2: Clunk down');
+            this.morphVerticalBoundary(momentumData, 'clunk');
+        }, 30); // 0.03s = 30ms
+        
+        setTimeout(() => {
+            console.log('🍮 Phase 3: Bounce');
+            this.morphVerticalBoundary(momentumData, 'bounce');
+        }, 90); // 0.03 + 0.06 = 90ms
+        
+        setTimeout(() => {
+            console.log('🍮 Phase 4: Lock');
+            this.morphVerticalBoundary(momentumData, 'lock');
+        }, 130); // 0.03 + 0.06 + 0.04 = 130ms
+        
+        setTimeout(() => {
+            console.log('🍮 Buttery clunk complete!');
+            this.returnToAccurateData();
+        }, 150); // 0.03 + 0.06 + 0.04 + 0.02 = 150ms
+    }
+    
+    // === MORPH VERTICAL BOUNDARY FOR SATISFYING CLUNK ===
+    morphVerticalBoundary(momentumData, phase) {
+        let displacement = 0;
+        
+        switch (phase) {
+            case 'overshoot':
+                displacement = -8; // Overshoot UP (negative = higher)
+                break;
+            case 'clunk':
+                displacement = 6; // Satisfying drop DOWN (positive = lower)
+                break;
+            case 'bounce':
+                displacement = -2; // Small bounce UP
+                break;
+            case 'lock':
+                displacement = 0; // Final lock into accurate position
+                break;
+        }
+        
+        // Create new data with Y-shifted values for satisfying vertical movement
+        const morphedData = this.data.map((d, i) => {
+            const momentum = momentumData[i];
+            // Higher data points have more "weight" so they clunk more
+            const verticalShift = displacement * momentum.liquidMass;
             
-            // Pause for anticipation
-            this.timeline.to({}, { 
-                duration: this.animationParams.anticipation.pauseDuration 
-            });
-        }
-        
-        // === DISNEY PRINCIPLE 1: SQUASH & STRETCH ===
-        if (this.animationParams.squashAndStretch.enabled) {
-            // SQUASH - compress before reveal
-            this.timeline.to(element, {
-                scaleY: this.animationParams.squashAndStretch.squashAmount,
-                scaleX: 1, // Reset from anticipation
-                transformOrigin: "bottom center",
-                duration: this.animationParams.squashAndStretch.squashDuration,
-                ease: "power2.in"
-            }, delay / 1000 + 0.15);
-        }
-        
-        // === MAIN REVEAL: Fade in and stretch ===
-        this.timeline.to(element, {
-            opacity: 1,
-            scaleY: this.animationParams.squashAndStretch.enabled ? 
-                this.animationParams.squashAndStretch.stretchAmount : 1,
-            duration: baseDuration * 0.3,
-            ease: "power2.out"
-        }, delay / 1000 + 0.25);
-        
-        // === BUTTERY DRAWING ANIMATION: Left to right reveal ===
-        this.timeline.to(revealElement, {
-            attr: { width: this.width },
-            duration: baseDuration * 0.6,
-            ease: "power2.out"
-        }, delay / 1000 + 0.3);
-        
-        // === DISNEY PRINCIPLE 8: SECONDARY ACTION ===
-        if (this.animationParams.secondaryAction.enabled && this.animationParams.secondaryAction.jiggleIntensity > 0) {
-            for (let i = 0; i < this.animationParams.secondaryAction.maxJiggles; i++) {
-                const jiggleTime = delay / 1000 + 0.5 + (i * 0.2);
-                const intensity = this.animationParams.secondaryAction.jiggleIntensity;
-                
-                // Jiggle
-                this.timeline.to(element, {
-                    x: (Math.random() - 0.5) * intensity,
-                    y: (Math.random() - 0.5) * intensity,
-                    duration: 0.08,
-                    ease: "none"
-                }, jiggleTime);
-                
-                // Return to center
-                this.timeline.to(element, {
-                    x: 0,
-                    y: 0,
-                    duration: 0.12,
-                    ease: "power2.out"
-                }, jiggleTime + 0.08);
-            }
-        }
-        
-        // === DISNEY PRINCIPLE 5: FOLLOW THROUGH ===
-        if (this.animationParams.followThrough.enabled) {
-            // Slight overshoot
-            this.timeline.to(element, {
-                scaleY: this.animationParams.followThrough.overshootAmount,
-                duration: 0.1,
-                ease: "power2.out"
-            }, delay / 1000 + baseDuration - 0.3);
+            // Calculate the shifted Y value
+            const currentY = this.yScale(d.year1);
+            const shiftedY = currentY + verticalShift;
+            const shiftedValue = this.yScale.invert(shiftedY);
             
-            // Settle to final position
-            this.timeline.to(element, {
-                scaleY: 1,
-                duration: this.animationParams.followThrough.settleDuration,
-                ease: "back.out(1.5)"
-            });
+            return {
+                day: d.day, // Keep X accurate
+                year1: Math.max(shiftedValue, 0) // Don't go negative, clamp to bottom
+            };
+        });
+        
+        // Update path - vertical clunk movement
+        this.organicPath
+            .datum(morphedData)
+            .attr("d", this.areaGenerator);
+    }
+    
+    // === MORPH VERTICAL BOUNDARY FOR BUTTERY CLUNK ===
+    morphVerticalBoundary(momentumData, phase) {
+        let displacement = 0;
+        
+        switch (phase) {
+            case 'overshoot':
+                displacement = -8; // Up (negative = higher on chart)
+                break;
+            case 'clunk':
+                displacement = 6; // Down (positive = lower on chart)
+                break;
+            case 'bounce':
+                displacement = -2; // Small up
+                break;
+            case 'lock':
+                displacement = 0; // Final accurate position
+                break;
         }
+        
+        // Create morphed data with Y-shifted values
+        const morphedData = this.data.map((d, i) => {
+            const momentum = momentumData[i];
+            // Higher data points have more "weight" so they move more
+            const verticalShift = displacement * momentum.liquidMass;
+            
+            // Calculate the shifted Y value
+            const currentY = this.yScale(d.year1);
+            const shiftedY = currentY + verticalShift;
+            const shiftedValue = this.yScale.invert(shiftedY);
+            
+            return {
+                day: d.day, // Keep X accurate
+                year1: Math.max(shiftedValue, 0) // Don't go negative
+            };
+        });
+        
+        // Update path with buttery morphing
+        this.organicPath
+            .datum(morphedData)
+            .attr("d", this.areaGenerator);
+    }
+    
+    updatePathWithPoints(points) {
+        // Create new data array with morphed points
+        const morphedData = points.map((point, i) => ({
+            day: this.data[i].day,
+            year1: this.yScale.invert(point.y)
+        }));
+        
+        // Update the path
+        this.organicPath
+            .datum(morphedData)
+            .attr("d", this.areaGenerator);
+    }
+    
+    // === RETURN TO ACCURATE DATA ===
+    returnToAccurateData() {
+        console.log('📊 Returning to accurate complete dataset');
+        
+        // Reset to the full, accurate dataset
+        this.organicPath
+            .datum(this.data)
+            .attr("d", this.areaGenerator);
+        
+        // Reset current slice to full data
+        this.currentDataSlice = this.data;
+        
+        // Reset offsets
+        this.noiseOffset = 0;
+        this.breathingOffset = 0;
     }
     
     reset() {
-        console.log('🔄 Resetting buttery animation...');
+        console.log('🔄 Resetting progressive drawing...');
         
         if (this.timeline) {
             this.timeline.kill();
         }
         
-        // Reset all paths and masks
-        Object.keys(this.paths).forEach(year => {
-            gsap.set(this.paths[year].node(), { 
-                opacity: 0, 
-                scaleX: 1, 
-                scaleY: 1, 
-                x: 0, 
-                y: 0 
-            });
-            gsap.set(`.reveal-${year}`, { attr: { width: 0 } });
-        });
+        // Reset current data slice
+        this.currentDataSlice = [];
+        
+        // Clear the path
+        this.organicPath.datum([]).attr("d", this.areaGenerator);
+        
+        // Reset offsets
+        this.noiseOffset = 0;
+        this.breathingOffset = 0;
+        this.drawProgress = 0;
         
         this.isPlaying = false;
         this.setPlayButtonState(false);
     }
     
     randomizeData() {
-        console.log('🎲 Generating new buttery data...');
+        console.log('🎲 Generating new organic data...');
         
         // Generate new data with variations
         this.data = this.data.map(d => ({
@@ -371,14 +413,18 @@ class ButteryAnimationEngine {
             playBtn.disabled = disabled;
         }
     }
+    
+    // Legacy methods for compatibility
+    play() {
+        this.playOrganicFlow();
+    }
+    
+    playSelectedYears(years) {
+        this.playOrganicFlow();
+    }
 }
 
 // Export for use
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ButteryAnimationEngine };
-}
-
-// Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { ButteryAnimationEngine };
 }
