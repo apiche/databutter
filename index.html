@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>databutter - Organic Flow Animation</title>
+    <title>databutter - Adaptive Smooth Animation</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
@@ -27,11 +27,38 @@
             padding: 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 12px;
+            position: relative;
         }
         
         .header h1 {
             margin: 0;
             font-size: 2rem;
+        }
+        
+        .fps-monitor {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .fps-value {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .performance-warning {
+            background: rgba(243, 156, 18, 0.2);
+            border: 1px solid #f39c12;
+            color: #f39c12;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            text-align: center;
         }
         
         .controls {
@@ -67,18 +94,6 @@
             width: 100%;
         }
         
-        input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: #667eea;
-        }
-        
-        .checkbox-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
         .main-controls {
             background: #2a2a2a;
             border-radius: 8px;
@@ -92,76 +107,6 @@
             align-items: center;
             flex-wrap: wrap;
             gap: 20px;
-        }
-        
-        .year-selection {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .year-selection label {
-            font-size: 12px;
-            color: #aaa;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-right: 10px;
-        }
-        
-        .year-buttons {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .year-btn {
-            padding: 8px 12px;
-            font-size: 12px;
-            border-radius: 6px;
-            border: 2px solid;
-            background: transparent;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-        
-        .year-btn.year-1 {
-            border-color: #e74c3c;
-            color: #e74c3c;
-        }
-        
-        .year-btn.year-1.active {
-            background: #e74c3c;
-            color: white;
-        }
-        
-        .year-btn.year-2 {
-            border-color: #f39c12;
-            color: #f39c12;
-        }
-        
-        .year-btn.year-2.active {
-            background: #f39c12;
-            color: white;
-        }
-        
-        .year-btn.year-3 {
-            border-color: #27ae60;
-            color: #27ae60;
-        }
-        
-        .year-btn.year-3.active {
-            background: #27ae60;
-            color: white;
-        }
-        
-        .year-btn.all-years {
-            border-color: #667eea;
-            color: #667eea;
-        }
-        
-        .year-btn.all-years.active {
-            background: #667eea;
-            color: white;
         }
         
         .action-buttons {
@@ -195,7 +140,7 @@
             background: #2a2a2a;
             border-radius: 12px;
             padding: 30px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         
         .chart-svg {
@@ -222,26 +167,18 @@
             stroke: #555;
         }
         
-        .log-output {
-            background: #111;
-            color: #0f0;
-            padding: 15px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
+        .axis .domain {
+            stroke: #666;
+        }
+        
+        .axis .tick line {
+            stroke: #555;
         }
         
         @media (max-width: 768px) {
             .controls-section {
                 flex-direction: column;
                 align-items: stretch;
-            }
-            
-            .year-selection {
-                justify-content: center;
             }
             
             .action-buttons {
@@ -253,10 +190,18 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>databutter</h1>
+            <h1>databutter - Adaptive Smooth</h1>
+            <div class="fps-monitor">
+                <span class="fps-value" id="fpsDisplay">60</span> FPS
+            </div>
         </div>
         
-        <!-- Essential Controls Only -->
+        <!-- Performance Warning (hidden by default) -->
+        <div class="performance-warning" id="performanceWarning" style="display: none;">
+            ⚠️ Performance mode active - Animation quality reduced for smooth playback
+        </div>
+        
+        <!-- Essential Controls -->
         <div class="controls">
             <div class="control-group">
                 <label>Animation Speed</label>
@@ -267,6 +212,11 @@
                 <label>Drawing Duration (seconds)</label>
                 <input type="number" id="drawingDuration" value="2.0" min="1.0" max="5.0" step="0.2">
             </div>
+            
+            <div class="control-group">
+                <label>Leading Edge Bulge</label>
+                <input type="number" id="leadingEdgeBulge" value="0.15" min="0.0" max="0.5" step="0.05">
+            </div>
         </div>
         
         <!-- Main Control Section -->
@@ -275,9 +225,7 @@
                 <!-- Action Buttons -->
                 <div class="action-buttons">
                     <button onclick="playAnimation()" id="playBtn">▶ Play</button>
-                    <button onclick="animationEngine.reset()" id="resetBtn">⏹ Reset</button>
                     <button onclick="animationEngine.randomizeData()" id="randomizeBtn">🎲 New Data</button>
-                    <button onclick="logCurrentSettings()">📋 Log Settings</button>
                 </div>
             </div>
         </div>
@@ -286,11 +234,6 @@
         <div class="chart-container">
             <svg class="chart-svg" id="chartSvg"></svg>
         </div>
-        
-        <!-- Log Output -->
-        <div class="log-output" id="logOutput">
-Animation logs will appear here...
-        </div>
     </div>
 
     <!-- Load framework -->
@@ -298,41 +241,94 @@ Animation logs will appear here...
     <script src="performance-engine.js"></script>
     <script src="animation-engine.js"></script>
     <script>
-        // Simple app initialization
+        // Performance-aware app initialization
         let animationEngine;
+        let performanceMonitor;
+        
+        // Performance optimization: Reduce animation frequency when FPS is low
+        function createPerformanceAwareEngine() {
+            // Create animation engine
+            animationEngine = new ButteryAnimationEngine(sampleData, '#chartSvg');
+            window.animationEngine = animationEngine; // Make it globally accessible for performance monitor
+            
+            // Listen for performance changes and adapt
+            if (window.performanceMonitor) {
+                performanceMonitor = window.performanceMonitor;
+                
+                performanceMonitor.onPerformanceChange((fps, level, constraints) => {
+                    // Update FPS display
+                    const fpsDisplay = document.getElementById('fpsDisplay');
+                    if (fpsDisplay) {
+                        fpsDisplay.textContent = fps;
+                        fpsDisplay.style.color = fps >= 50 ? '#27ae60' : fps >= 30 ? '#f39c12' : '#e74c3c';
+                    }
+                    
+                    // Show/hide performance warning
+                    const warning = document.getElementById('performanceWarning');
+                    if (warning) {
+                        warning.style.display = level === 'low' ? 'block' : 'none';
+                    }
+                    
+                    // Adapt animation quality
+                    if (level === 'low' && animationEngine) {
+                        console.log('🛡️ Adapting animation for low performance');
+                        animationEngine.animationParams.drawingDuration = 1.5;
+                        
+                        // Update UI controls
+                        const durationInput = document.getElementById('drawingDuration');
+                        if (durationInput) durationInput.value = 1.5;
+                        
+                    } else if (level === 'high' && animationEngine) {
+                        // Restore full quality if user hasn't customized
+                        if (animationEngine.animationParams.drawingDuration <= 1.5) {
+                            animationEngine.animationParams.drawingDuration = 2.0;
+                            
+                            const durationInput = document.getElementById('drawingDuration');
+                            if (durationInput) durationInput.value = 2.0;
+                        }
+                    }
+                    
+                    logPerformanceChange(fps, level);
+                });
+            }
+            
+            return animationEngine;
+        }
+        
+        function logPerformanceChange(fps, level) {
+            console.log(`[Performance] ${fps} FPS (${level} mode)`);
+        }
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🧈 Simple databutter initializing...');
+            console.log('🧈 Performance-aware databutter initializing...');
             
-            // Initialize animation engine
-            animationEngine = new ButteryAnimationEngine(sampleData, '#chartSvg');
-            window.animationEngine = animationEngine;
+            // Initialize with performance awareness
+            animationEngine = createPerformanceAwareEngine();
             
             // Bind all controls
             bindAllControls();
             
-            // Auto-play
+            // Auto-play with delay to let performance monitor stabilize
             setTimeout(() => {
                 playAnimation();
-                logCurrentSettings();
-            }, 1000);
+            }, 1500); // Increased delay
             
-            console.log('✨ Ready for realistic fluid animation!');
+            console.log('✨ Ready for adaptive smooth animation!');
         });
         
         function playAnimation() {
-            console.log(`🎬 Playing realistic fluid animation`);
+            console.log(`🎬 Playing adaptive smooth animation`);
             
             // Reset animation first
             animationEngine.reset();
             
-            // Play the animation - use the play() method that exists
+            // Play the animation
             animationEngine.play();
         }
         
         function bindAllControls() {
             // Get all input elements
-            const inputs = document.querySelectorAll('input[type="number"], input[type="checkbox"]');
+            const inputs = document.querySelectorAll('input[type="number"]');
             
             inputs.forEach(input => {
                 input.addEventListener('input', () => {
@@ -344,49 +340,26 @@ Animation logs will appear here...
         function updateEngineFromControls() {
             if (!animationEngine) return;
             
-            // Update simplified parameters
-            animationEngine.animationParams = {
-                animationSpeed: parseFloat(document.getElementById('animationSpeed').value),
-                drawingDuration: parseFloat(document.getElementById('drawingDuration').value)
-            };
+            // Update parameters from controls
+            animationEngine.animationParams.animationSpeed = parseFloat(document.getElementById('animationSpeed').value);
+            animationEngine.animationParams.drawingDuration = parseFloat(document.getElementById('drawingDuration').value);
+            animationEngine.animationParams.leadingEdgeBulge = parseFloat(document.getElementById('leadingEdgeBulge').value);
+            
+            console.log('🎛️ Updated animation parameters from controls');
         }
         
-        function logCurrentSettings() {
-            const settings = animationEngine.animationParams;
-            const timestamp = new Date().toLocaleTimeString();
-            
-            const logEntry = `
-[${timestamp}] REALISTIC FLUID ANIMATION:
-═══════════════════════════════════════
-ANIMATION TYPE: Realistic Fluid Momentum
-
-CONTROLS:
-  Animation Speed: ${settings.animationSpeed}x
-  Drawing Duration: ${settings.drawingDuration}s
-
-`;
-            
-            const logOutput = document.getElementById('logOutput');
-            logOutput.textContent += logEntry;
-            logOutput.scrollTop = logOutput.scrollHeight;
-            
-            console.log('📋 Settings logged:', settings);
-        }
+        // Remove testPerformance function entirely
+        
+        // Remove the logCurrentStatus function entirely
         
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             if (e.code === 'Space') {
                 e.preventDefault();
-                if (animationEngine.isPlaying) {
-                    animationEngine.reset();
-                } else {
-                    playAnimation();
-                }
-            } else if (e.code === 'KeyL') {
-                logCurrentSettings();
+                playAnimation(); // Smart play - always restarts
             } else if (e.code === 'KeyR') {
                 e.preventDefault();
-                animationEngine.reset();
+                playAnimation(); // R key also triggers smart play
             }
         });
     </script>
